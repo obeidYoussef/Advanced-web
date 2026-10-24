@@ -1,44 +1,90 @@
 import { useState } from 'react'
+import { DashboardLayout } from '../../components/dashboardLayout.jsx'
+import { FormField } from '../../components/formField.jsx'
+import { apiRequest } from '../../lib/api.js'
 import { useAuth } from '../auth/useAuth.js'
 
 export function AccountPage() {
-  const { user, signOut } = useAuth()
+  const { session, user, refreshUser } = useAuth()
+  const [form, setForm] = useState({
+    fullName: user.fullName,
+    phone: user.phone ?? '',
+  })
+  const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
-  async function handleSignOut() {
+  function updateField(event) {
+    const { name, value } = event.target
+    setForm((current) => ({ ...current, [name]: value }))
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+    setSubmitting(true)
+    setMessage('')
     setError('')
 
     try {
-      await signOut()
-    } catch (signOutError) {
-      setError(signOutError.message)
+      await apiRequest('/auth/me', {
+        method: 'PATCH',
+        accessToken: session.access_token,
+        body: {
+          fullName: form.fullName.trim(),
+          phone: form.phone.trim() || null,
+        },
+      })
+      refreshUser()
+      setMessage('Profile updated.')
+    } catch (updateError) {
+      setError(updateError.message)
+    } finally {
+      setSubmitting(false)
     }
   }
 
   return (
-    <main className="status-page">
-      <section className="status-card">
-        <span className="status-badge">{user.role}</span>
-        <h1>Hello, {user.fullName}</h1>
-        <p>
-          Your account is ready. Features for this role will be
-          added in its project phase.
-        </p>
-
-        {error && (
-          <div className="message message-error" role="alert">
-            {error}
+    <DashboardLayout
+      eyebrow="Account settings"
+      title="Your profile"
+      subtitle={`Signed in as ${user.email}`}
+    >
+      <section className="panel create-panel">
+        <div className="panel-heading">
+          <div>
+            <h2>Personal information</h2>
+            <p>Your role and approval status can only be changed by an administrator.</p>
           </div>
-        )}
+        </div>
 
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={handleSignOut}
-        >
-          Sign out
-        </button>
+        <form className="form-grid" onSubmit={handleSubmit}>
+          {error && <div className="message message-error form-wide" role="alert">{error}</div>}
+          {message && <div className="message message-success form-wide" role="status">{message}</div>}
+          <FormField
+            label="Full name"
+            name="fullName"
+            value={form.fullName}
+            onChange={updateField}
+            minLength="2"
+            maxLength="100"
+            required
+          />
+          <FormField
+            label="Phone number"
+            name="phone"
+            type="tel"
+            value={form.phone}
+            onChange={updateField}
+            minLength="5"
+            maxLength="30"
+          />
+          <div className="form-actions">
+            <button className="button button-primary" type="submit" disabled={submitting}>
+              {submitting ? 'Saving…' : 'Save changes'}
+            </button>
+          </div>
+        </form>
       </section>
-    </main>
+    </DashboardLayout>
   )
 }

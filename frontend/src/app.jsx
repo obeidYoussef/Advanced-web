@@ -1,20 +1,63 @@
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router'
-import { AdminDashboardPage } from './features/admin/adminDashboardPage.jsx'
 import { RequireAdmin } from './features/admin/requireAdmin.jsx'
 import { AccountPage } from './features/account/accountPage.jsx'
 import { LoginPage } from './features/auth/loginPage.jsx'
 import { RegisterPage } from './features/auth/registerPage.jsx'
 import { RequireAuth } from './features/auth/requireAuth.jsx'
-import { CustomerDashboardPage } from './features/customer/customerDashboardPage.jsx'
 import { RequireCustomer } from './features/customer/requireCustomer.jsx'
 import { ManagerApplicationStatusPage } from './features/manager/managerApplicationStatusPage.jsx'
-import { ManagerDashboardPage } from './features/manager/managerDashboardPage.jsx'
 import { RequireApprovedManager } from './features/manager/requireApprovedManager.jsx'
+import { HomePage } from './features/public/homePage.jsx'
+
+const HotelDetailsPage = lazy(() =>
+  import('./features/public/hotelDetailsPage.jsx').then((module) => ({
+    default: module.HotelDetailsPage,
+  })),
+)
+const AdminDashboardPage = lazy(() =>
+  import('./features/admin/adminDashboardPage.jsx').then((module) => ({
+    default: module.AdminDashboardPage,
+  })),
+)
+const BookingPage = lazy(() =>
+  import('./features/customer/bookingPage.jsx').then((module) => ({
+    default: module.BookingPage,
+  })),
+)
+const CustomerDashboardPage = lazy(() =>
+  import('./features/customer/customerDashboardPage.jsx').then((module) => ({
+    default: module.CustomerDashboardPage,
+  })),
+)
+const ManagerDashboardPage = lazy(() =>
+  import('./features/manager/managerDashboardPage.jsx').then((module) => ({
+    default: module.ManagerDashboardPage,
+  })),
+)
+
+const ManagerHotelPage = lazy(() =>
+  import('./features/manager/managerHotelPage.jsx').then((module) => ({
+    default: module.ManagerHotelPage,
+  })),
+)
+const ManagerReservationsPage = lazy(() =>
+  import('./features/manager/managerReservationsPage.jsx').then((module) => ({
+    default: module.ManagerReservationsPage,
+  })),
+)
+const ManagerReportsPage = lazy(() =>
+  import('./features/manager/managerReportsPage.jsx').then((module) => ({
+    default: module.ManagerReportsPage,
+  })),
+)
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+    <Suspense fallback={<main className="status-page">Loading…</main>}>
+      <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/hotels/:hotelId" element={<HotelDetailsPage />} />
 
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
@@ -24,6 +67,7 @@ export default function App() {
 
         <Route element={<RequireCustomer />}>
           <Route path="/customer" element={<CustomerDashboardPage />} />
+          <Route path="/book/:roomTypeId" element={<BookingPage />} />
         </Route>
 
         <Route
@@ -33,6 +77,9 @@ export default function App() {
 
         <Route element={<RequireApprovedManager />}>
           <Route path="/manager" element={<ManagerDashboardPage />} />
+          <Route path="/manager/hotels/:hotelId" element={<ManagerHotelPage />} />
+          <Route path="/manager/reservations" element={<ManagerReservationsPage />} />
+          <Route path="/manager/reports" element={<ManagerReportsPage />} />
         </Route>
 
         <Route element={<RequireAdmin />}>
@@ -41,6 +88,7 @@ export default function App() {
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   )
 }

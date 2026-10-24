@@ -49,3 +49,23 @@ export async function apiRequest(
 
     return data
 }
+
+export async function downloadApiFile(path, accessToken, fileName) {
+    const response = await fetch(`${apiUrl}${path}`, {
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+        },
+    })
+
+    if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.error?.message ?? 'Download failed')
+    }
+
+    const url = URL.createObjectURL(await response.blob())
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fileName
+    link.click()
+    URL.revokeObjectURL(url)
+}

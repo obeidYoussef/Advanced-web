@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Link, Navigate } from 'react-router'
+import { Link, Navigate, useLocation } from 'react-router'
 import { FormField } from '../../components/formField.jsx'
 import { AuthLayout } from './authLayout.jsx'
 import { getHomePath } from './getHomePath.js'
 import { useAuth } from './useAuth.js'
 
 export function LoginPage() {
+  const location = useLocation()
   const { signIn, session, user, loading } = useAuth()
   const [form, setForm] = useState({
     email: '',
@@ -19,7 +20,7 @@ export function LoginPage() {
   }
 
   if (session) {
-    return <Navigate to={getHomePath(user)} replace />
+    return <Navigate to={location.state?.from ?? getHomePath(user)} replace />
   }
 
   function updateField(event) {
@@ -54,7 +55,7 @@ export function LoginPage() {
       subtitle="Access your account using your email and password."
       footer={
         <p>
-          Need an account? <Link to="/register">Register</Link>
+          Need an account? <Link to="/register" state={location.state}>Register</Link>
         </p>
       }
     >

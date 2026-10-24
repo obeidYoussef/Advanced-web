@@ -9,6 +9,9 @@ const envSchema = z.object({
     FRONTEND_URL: z.url(),
     SUPABASE_URL: z.url(),
     SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
+    SUPABASE_SECRET_KEY: z.string().min(1).optional(),
+    RESEND_API_KEY: z.string().min(1).optional(),
+    EMAIL_FROM: z.string().trim().min(3).optional(),
 })
 
 const result = envSchema.safeParse(process.env)

@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Link, Navigate } from 'react-router'
+import { Link, Navigate, useLocation } from 'react-router'
 import { FormField } from '../../components/formField.jsx'
 import { AuthLayout } from './authLayout.jsx'
 import { getHomePath } from './getHomePath.js'
 import { useAuth } from './useAuth.js'
 
 export function RegisterPage() {
+  const location = useLocation()
   const { signUp, session, user, loading } = useAuth()
   const [form, setForm] = useState({
     fullName: '',
@@ -23,7 +24,7 @@ export function RegisterPage() {
   }
 
   if (session) {
-    return <Navigate to={getHomePath(user)} replace />
+    return <Navigate to={location.state?.from ?? getHomePath(user)} replace />
   }
 
   function updateField(event) {
@@ -92,7 +93,7 @@ export function RegisterPage() {
       subtitle="Register as a customer or apply for a hotel manager account."
       footer={
         <p>
-          Already registered? <Link to="/login">Sign in</Link>
+          Already registered? <Link to="/login" state={location.state}>Sign in</Link>
         </p>
       }
     >

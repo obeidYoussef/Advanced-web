@@ -15,17 +15,25 @@ export const supabaseAuth = createClient(
     serverAuthOptions,
 )
 
+export const supabaseAdmin = env.SUPABASE_SECRET_KEY
+    ? createClient(
+          env.SUPABASE_URL,
+          env.SUPABASE_SECRET_KEY,
+          serverAuthOptions,
+      )
+    : null
+
 export function createUserSupabase(accessToken) {
     return createClient(
         env.SUPABASE_URL,
         env.SUPABASE_PUBLISHABLE_KEY,
         {
-        ...serverAuthOptions,
-        global: {
-            headers: {
-            Authorization: `Bearer ${accessToken}`,
+            ...serverAuthOptions,
+            global: {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                },
             },
-        },
         },
     )
 }

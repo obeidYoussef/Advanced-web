@@ -1,0 +1,69 @@
+# Dependencies
+node_modules/
+
+# Production builds
+dist/
+dist-ssr/
+build/
+
+# Test output
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+
+# Tool caches
+.vite/
+.cache/
+.turbo/
+.eslintcache
+*.tsbuildinfo
+
+# Environment variables and local configuration
+.env
+.env.*
+!.env.example
+*.local
+
+# Secrets and certificates
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Logs and runtime files
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.pid
+*.pid.lock
+
+# Database dumps and backups
+*.dump
+*.backup
+*.sql.gz
+
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/
+.supabase/
+
+# Editor files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+[Dd]esktop.ini

@@ -1,3 +1,5 @@
+import { SiteHeader } from '../../components/siteHeader.jsx'
+
 export function AuthLayout({
   title,
   subtitle,
@@ -5,18 +7,21 @@ export function AuthLayout({
   footer,
 }) {
   return (
-    <main className="auth-page">
-      <section className="auth-card">
-        <div className="auth-heading">
-          <span className="eyebrow">Hotel Reservation</span>
-          <h1>{title}</h1>
-          <p>{subtitle}</p>
-        </div>
+    <div className="public-page">
+      <SiteHeader />
+      <main className="auth-page">
+        <section className="auth-card">
+          <div className="auth-heading">
+            <span className="eyebrow">Hotel Reservation</span>
+            <h1>{title}</h1>
+            <p>{subtitle}</p>
+          </div>
 
-        {children}
+          {children}
 
-        {footer && <div className="auth-footer">{footer}</div>}
-      </section>
-    </main>
+          {footer && <div className="auth-footer">{footer}</div>}
+        </section>
+      </main>
+    </div>
   )
 }

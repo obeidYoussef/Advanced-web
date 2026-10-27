@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { DashboardLayout } from '../../components/dashboardLayout.jsx'
 import { FormField } from '../../components/formField.jsx'
+import { SiteHeader } from '../../components/siteHeader.jsx'
 import { apiRequest } from '../../lib/api.js'
 import { useAuth } from '../auth/useAuth.js'
 
@@ -43,17 +44,12 @@ export function AccountPage() {
     }
   }
 
-  return (
-    <DashboardLayout
-      eyebrow="Account settings"
-      title="Your profile"
-      subtitle={`Signed in as ${user.email}`}
-    >
+  const formContent = (
       <section className="panel create-panel">
         <div className="panel-heading">
           <div>
             <h2>Personal information</h2>
-            <p>Your role and approval status can only be changed by an administrator.</p>
+            <p>Keep your contact details up to date.</p>
           </div>
         </div>
 
@@ -85,6 +81,31 @@ export function AccountPage() {
           </div>
         </form>
       </section>
+  )
+
+  if (user.role === 'customer') {
+    return (
+      <div className="public-page">
+        <SiteHeader />
+        <main className="customer-reservations-page">
+          <header className="public-account-heading">
+            <p className="eyebrow">Account settings</p>
+            <h1>Your profile</h1>
+            <p>Signed in as {user.email}</p>
+          </header>
+          {formContent}
+        </main>
+      </div>
+    )
+  }
+
+  return (
+    <DashboardLayout
+      eyebrow="Account settings"
+      title="Your profile"
+      subtitle={`Signed in as ${user.email}`}
+    >
+      {formContent}
     </DashboardLayout>
   )
 }

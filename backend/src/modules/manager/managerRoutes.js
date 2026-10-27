@@ -12,7 +12,6 @@ import {
     getManagerHotel,
     listManagerHotels,
     removeHotelFacility,
-    submitHotel,
     updateHotel,
     updateHotelImage,
 } from './hotelService.js'
@@ -31,13 +30,6 @@ import {
 const uuid = z.uuid()
 const date = z.iso.date()
 const money = z.coerce.number().min(0).max(9999999999.99)
-const status = z.enum([
-    'draft',
-    'submitted',
-    'approved',
-    'rejected',
-    'suspended',
-])
 const nonEmptyPatch = (schema) =>
     schema.refine((value) => Object.keys(value).length > 0, {
         message: 'At least one field is required',
@@ -55,7 +47,6 @@ const hotelFields = {
     contactEmail: z.email().max(254).nullable(),
     contactPhone: z.string().trim().max(30).nullable(),
     currency: z.string().trim().length(3).toUpperCase(),
-    taxRate: z.coerce.number().min(0).max(100),
     serviceFee: money,
     timezoneName: z.string().trim().min(1).max(100),
     checkInTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
@@ -75,7 +66,6 @@ const hotelCreateSchema = z.object({
         contactEmail: hotelFields.contactEmail.optional(),
         contactPhone: hotelFields.contactPhone.optional(),
         currency: hotelFields.currency.default('USD'),
-        taxRate: hotelFields.taxRate.default(0),
         serviceFee: hotelFields.serviceFee.default(0),
         timezoneName: hotelFields.timezoneName.default('UTC'),
         checkInTime: hotelFields.checkInTime.default('15:00'),
@@ -102,6 +92,7 @@ const roomTypeFields = {
     description: z.string().trim().max(5000),
     capacity: z.coerce.number().int().min(1).max(20),
     basePrice: money,
+    imageUrl: z.url().max(2000).nullable(),
     isActive: z.boolean(),
 }
 
@@ -112,7 +103,9 @@ const roomTypeCreateSchema = z.object({
         description: roomTypeFields.description.default(''),
         capacity: roomTypeFields.capacity,
         basePrice: roomTypeFields.basePrice,
-        isActive: roomTypeFields.isActive.default(true),
+        imageUrl: roomTypeFields.imageUrl.optional().default(null),
+        amenityIds: z.array(z.coerce.number().int().positive().max(32767)).default([]),
+        roomNumbers: z.array(z.string().trim().min(1).max(30)).min(1).max(200),
     }),
 })
 
@@ -158,7 +151,6 @@ managerRouter.get(
         z.object({
             query: z.object({
                 ...paginationFields,
-                status: status.optional(),
             }),
         }),
     ),
@@ -205,18 +197,6 @@ managerRouter.patch(
             request.auth.supabase,
             request.validated.params.hotelId,
             request.validated.body,
-        )
-        response.json({ hotel })
-    },
-)
-
-managerRouter.post(
-    '/hotels/:hotelId/submit',
-    validate(z.object({ params: z.object({ hotelId: uuid }) })),
-    async (request, response) => {
-        const hotel = await submitHotel(
-            request.auth.supabase,
-            request.validated.params.hotelId,
         )
         response.json({ hotel })
     },

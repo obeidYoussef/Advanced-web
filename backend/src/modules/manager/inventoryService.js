@@ -8,18 +8,19 @@ function definedEntries(fields) {
 }
 
 export async function createRoomType(supabase, hotelId, input) {
-    const { data, error } = await supabase
-        .from('room_types')
-        .insert({
-            hotel_id: hotelId,
-            name: input.name,
-            description: input.description,
-            capacity: input.capacity,
-            base_price: input.basePrice,
-            is_active: input.isActive,
-        })
-        .select()
-        .single()
+    const { data, error } = await supabase.rpc(
+        'create_room_type_with_inventory',
+        {
+            p_hotel_id: hotelId,
+            p_name: input.name,
+            p_description: input.description,
+            p_capacity: input.capacity,
+            p_base_price: input.basePrice,
+            p_image_url: input.imageUrl,
+            p_amenity_ids: input.amenityIds,
+            p_room_numbers: input.roomNumbers,
+        },
+    )
 
     throwSupabaseError(error, 'Could not create room type')
     return toCamelCase(data)
@@ -34,6 +35,7 @@ export async function updateRoomType(supabase, roomTypeId, input) {
                 description: input.description,
                 capacity: input.capacity,
                 base_price: input.basePrice,
+                image_url: input.imageUrl,
                 is_active: input.isActive,
             }),
         )

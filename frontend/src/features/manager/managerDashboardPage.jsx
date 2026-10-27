@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { DashboardLayout } from '../../components/dashboardLayout.jsx'
 import { FormField } from '../../components/formField.jsx'
@@ -10,10 +10,6 @@ const emptyHotel = {
   country: '',
   city: '',
   address: '',
-}
-
-function StatusBadge({ status }) {
-  return <span className={`status-badge status-${status}`}>{status}</span>
 }
 
 export function ManagerDashboardPage() {
@@ -46,14 +42,6 @@ export function ManagerDashboardPage() {
     }
   }, [session.access_token])
 
-  const summary = useMemo(() => ({
-    total: hotels.length,
-    approved: hotels.filter((hotel) => hotel.status === 'approved').length,
-    needsAttention: hotels.filter((hotel) =>
-      ['draft', 'rejected'].includes(hotel.status),
-    ).length,
-  }), [hotels])
-
   function updateField(event) {
     const { name, value } = event.target
     setForm((current) => ({ ...current, [name]: value }))
@@ -84,7 +72,7 @@ export function ManagerDashboardPage() {
     <DashboardLayout
       eyebrow="Manager workspace"
       title={`Welcome, ${user.fullName}`}
-      subtitle="Manage your properties and prepare them for approval."
+      subtitle="Create a property, then add its rooms, prices, and facilities."
       action={
         <button
           className="button button-primary"
@@ -95,17 +83,11 @@ export function ManagerDashboardPage() {
         </button>
       }
     >
-      <section className="summary-grid" aria-label="Hotel summary">
-        <article><span>Total hotels</span><strong>{summary.total}</strong></article>
-        <article><span>Approved</span><strong>{summary.approved}</strong></article>
-        <article><span>Needs attention</span><strong>{summary.needsAttention}</strong></article>
-      </section>
-
       {showCreateForm && (
         <section className="panel create-panel">
           <div className="panel-heading">
             <div>
-              <h2>Create a hotel draft</h2>
+              <h2>Create a hotel</h2>
               <p>Start with the essentials. Rooms, pricing, and images come next.</p>
             </div>
           </div>
@@ -117,7 +99,7 @@ export function ManagerDashboardPage() {
             <FormField label="Street address" name="address" value={form.address} onChange={updateField} minLength="5" maxLength="250" required />
             <div className="form-actions">
               <button className="button button-primary" type="submit" disabled={submitting}>
-                {submitting ? 'Creating…' : 'Create draft'}
+                {submitting ? 'Creating…' : 'Create hotel'}
               </button>
             </div>
           </form>
@@ -128,7 +110,7 @@ export function ManagerDashboardPage() {
         <div className="panel-heading">
           <div>
             <h2>Your hotels</h2>
-            <p>Only approved hotels are visible to travelers.</p>
+            <p>Hotels and active rooms are visible to travelers immediately.</p>
           </div>
         </div>
 
@@ -137,7 +119,7 @@ export function ManagerDashboardPage() {
         {!loading && !error && hotels.length === 0 && (
           <div className="empty-state compact">
             <h3>No hotels yet</h3>
-            <p>Create your first draft to begin the approval process.</p>
+            <p>Create your first hotel, then add its rooms and details.</p>
           </div>
         )}
         {!loading && hotels.length > 0 && (
@@ -152,7 +134,6 @@ export function ManagerDashboardPage() {
                   <p>{hotel.city}, {hotel.country}</p>
                 </div>
                 <span className="hotel-row-meta">{hotel.currency}</span>
-                <StatusBadge status={hotel.status} />
                 <Link className="button" to={`/manager/hotels/${hotel.id}`}>Manage</Link>
               </article>
             ))}

@@ -4,13 +4,11 @@ export function getHomePath(user) {
   }
 
   if (user?.role === 'manager') {
-    return user.managerStatus === 'approved'
-      ? '/manager'
-      : '/manager/application-status'
+    return '/manager'
   }
 
   if (user?.role === 'customer') {
-    return '/customer'
+    return '/'
   }
 
   return '/account'

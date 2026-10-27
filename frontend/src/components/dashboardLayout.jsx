@@ -9,11 +9,6 @@ const roleNavigation = {
     { to: '/manager/reports', label: 'Reports' },
     { to: '/account', label: 'Account' },
   ],
-  customer: [
-    { to: '/customer', label: 'My stays' },
-    { to: '/', label: 'Find a hotel' },
-    { to: '/account', label: 'Account' },
-  ],
   admin: [
     { to: '/admin', label: 'Overview' },
     { to: '/account', label: 'Account' },

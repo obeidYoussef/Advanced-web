@@ -4,6 +4,7 @@ import {
   useMemo,
   useState,
 } from 'react'
+import { useNavigate } from 'react-router'
 import { apiRequest } from '../../lib/api.js'
 import { supabase } from '../../lib/supabase.js'
 import { AuthContext } from './authContext.js'
@@ -15,6 +16,7 @@ const emptyProfileResult = {
 }
 
 export function AuthProvider({ children }) {
+  const navigate = useNavigate()
   const [session, setSession] = useState(null)
   const [sessionLoading, setSessionLoading] = useState(true)
   const [sessionError, setSessionError] = useState('')
@@ -141,7 +143,9 @@ export function AuthProvider({ children }) {
     if (error) {
       throw error
     }
-  }, [])
+
+    navigate('/', { replace: true })
+  }, [navigate])
 
   const refreshUser = useCallback(() => {
     setRefreshVersion((current) => current + 1)

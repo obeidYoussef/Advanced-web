@@ -29,12 +29,11 @@ export async function authenticate(request, _response, next) {
         )
     }
 
-    const {
-        data: { user },
-        error: authenticationError,
-    } = await supabaseAuth.auth.getUser(accessToken)
+    const { data: claimsData, error: authenticationError } =
+        await supabaseAuth.auth.getClaims(accessToken)
+    const claims = claimsData?.claims
 
-    if (authenticationError || !user) {
+    if (authenticationError || !claims?.sub) {
         return next(
             new HttpError(
                 401,
@@ -48,10 +47,8 @@ export async function authenticate(request, _response, next) {
 
     const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select(
-            'id, full_name, phone, role, manager_status, manager_status_reason',
-        )
-        .eq('id', user.id)
+        .select('id, full_name, phone, role')
+        .eq('id', claims.sub)
         .single()
 
     if (profileError || !profile) {
@@ -65,7 +62,10 @@ export async function authenticate(request, _response, next) {
     }
 
     request.auth = {
-        user,
+        user: {
+            id: claims.sub,
+            email: claims.email,
+        },
         profile,
         accessToken,
         supabase,

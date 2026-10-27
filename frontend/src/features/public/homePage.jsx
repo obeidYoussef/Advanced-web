@@ -62,7 +62,7 @@ function HotelCard({ hotel, searchParams }) {
           <div className="result-price">
             <small>{lowestRoom.room.quote ? `${lowestRoom.room.quote.nightCount} night total` : 'Price per night from'}</small>
             <strong>{lowestRoom.price.toFixed(2)} {hotel.currency}</strong>
-            {lowestRoom.room.quote && <small>Includes taxes and fees</small>}
+            {lowestRoom.room.quote && <small>Includes fees</small>}
           </div>
         )}
         <Link className="button button-primary" to={detailsPath}>See availability</Link>
@@ -164,7 +164,7 @@ export function HomePage() {
           <div className="search-hero-copy">
             <p className="eyebrow">Stay somewhere worth remembering</p>
             <h1>Find the right stay at a clear price.</h1>
-            <p>Compare approved hotels, live availability, and complete stay totals.</p>
+            <p>Compare hotels, live availability, and complete stay totals.</p>
           </div>
           <HotelSearchForm form={form} onChange={updateSearch} onSubmit={handleSearch} />
           <div className="trust-strip" aria-label="Booking benefits">
@@ -177,7 +177,7 @@ export function HomePage() {
         <section className="hotel-results" aria-live="polite">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Approved properties</p>
+              <p className="eyebrow">Available properties</p>
               <h2>{form.city ? `Stays in ${form.city}` : 'Explore stays'}</h2>
             </div>
             {!loading && <span>{pagination?.total ?? hotels.length} propert{(pagination?.total ?? hotels.length) === 1 ? 'y' : 'ies'}</span>}

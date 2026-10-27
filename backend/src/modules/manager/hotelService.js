@@ -21,7 +21,6 @@ function hotelRow(input) {
         contact_email: input.contactEmail,
         contact_phone: input.contactPhone,
         currency: input.currency,
-        tax_rate: input.taxRate,
         service_fee: input.serviceFee,
         timezone_name: input.timezoneName,
         check_in_time: input.checkInTime,
@@ -36,7 +35,7 @@ function hotelRow(input) {
 export async function listManagerHotels(
     supabase,
     managerId,
-    { status, page, limit },
+    { page, limit },
 ) {
     const { from, to } = getPagination(page, limit)
     let query = supabase
@@ -45,10 +44,6 @@ export async function listManagerHotels(
         .eq('manager_id', managerId)
         .order('created_at', { ascending: false })
         .range(from, to)
-
-    if (status) {
-        query = query.eq('status', status)
-    }
 
     const { data, error, count } = await query
     throwSupabaseError(error, 'Could not load hotels')
@@ -84,7 +79,7 @@ export async function createHotel(supabase, managerId, input) {
         .insert({
             ...hotelRow(input),
             manager_id: managerId,
-            status: 'draft',
+            status: 'approved',
         })
         .select()
         .single()
@@ -102,15 +97,6 @@ export async function updateHotel(supabase, hotelId, input) {
         .single()
 
     throwSupabaseError(error, 'Could not update hotel')
-    return toCamelCase(data)
-}
-
-export async function submitHotel(supabase, hotelId) {
-    const { data, error } = await supabase.rpc('submit_hotel', {
-        p_hotel_id: hotelId,
-    })
-
-    throwSupabaseError(error, 'Could not submit hotel')
     return toCamelCase(data)
 }
 

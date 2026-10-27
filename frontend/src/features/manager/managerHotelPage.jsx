@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router'
 import { DashboardLayout } from '../../components/dashboardLayout.jsx'
 import { FormField } from '../../components/formField.jsx'
 import { apiRequest } from '../../lib/api.js'
+import { uploadHotelImage } from '../../lib/uploadImage.js'
 import { useAuth } from '../auth/useAuth.js'
 
 function HotelDetailsForm({ hotel, mutate }) {
@@ -18,7 +19,6 @@ function HotelDetailsForm({ hotel, mutate }) {
     contactEmail: hotel.contactEmail ?? '',
     contactPhone: hotel.contactPhone ?? '',
     currency: hotel.currency,
-    taxRate: hotel.taxRate,
     serviceFee: hotel.serviceFee,
     timezoneName: hotel.timezoneName,
     checkInTime: hotel.checkInTime.slice(0, 5),
@@ -66,7 +66,6 @@ function HotelDetailsForm({ hotel, mutate }) {
         <FormField label="Longitude" name="longitude" type="number" step="any" min="-180" max="180" value={form.longitude} onChange={updateField} required />
         <FormField label="Cover image URL" name="coverImageUrl" type="url" value={form.coverImageUrl} onChange={updateField} />
         <FormField label="Currency" name="currency" value={form.currency} onChange={updateField} minLength="3" maxLength="3" required />
-        <FormField label="Tax rate (%)" name="taxRate" type="number" step="0.01" min="0" max="100" value={form.taxRate} onChange={updateField} required />
         <FormField label="Service fee" name="serviceFee" type="number" step="0.01" min="0" value={form.serviceFee} onChange={updateField} required />
         <FormField label="Timezone" name="timezoneName" value={form.timezoneName} onChange={updateField} placeholder="Asia/Beirut" required />
         <FormField label="Check-in time" name="checkInTime" type="time" value={form.checkInTime} onChange={updateField} required />
@@ -89,7 +88,7 @@ function FacilitiesPanel({ hotel, facilities, mutate }) {
 
   return (
     <section className="panel compact-panel">
-      <div className="panel-heading"><div><h2>Facilities</h2><p>Select at least one before submission.</p></div></div>
+      <div className="panel-heading"><div><h2>Facilities</h2><p>Select the services available at this hotel.</p></div></div>
       <div className="choice-grid">
         {facilities.map((facility) => (
           <label className="choice" key={facility.id}>
@@ -137,20 +136,29 @@ function ImagesPanel({ hotel, mutate }) {
   )
 }
 
-function RoomTypesPanel({ hotel, amenities, mutate }) {
-  const [form, setForm] = useState({ name: '', description: '', capacity: '2', basePrice: '' })
+function RoomTypeEditor({ hotel, roomType, amenities, mutate }) {
+  const [editing, setEditing] = useState(false)
+  const [form, setForm] = useState({
+    name: roomType.name,
+    description: roomType.description,
+    capacity: roomType.capacity,
+    basePrice: roomType.basePrice,
+    imageUrl: roomType.imageUrl ?? '',
+    isActive: roomType.isActive,
+  })
+  const selected = new Set(roomType.roomTypeAmenities.map((item) => item.amenity.id))
 
-  function handleSubmit(event) {
+  function save(event) {
     event.preventDefault()
-    void mutate(`/manager/hotels/${hotel.id}/room-types`, {
-      method: 'POST',
-      body: form,
-      success: 'Room type created.',
-      after: () => setForm({ name: '', description: '', capacity: '2', basePrice: '' }),
+    void mutate(`/manager/room-types/${roomType.id}`, {
+      method: 'PATCH',
+      body: { ...form, imageUrl: form.imageUrl || null },
+      success: 'Room details updated.',
+      after: () => setEditing(false),
     })
   }
 
-  function toggleAmenity(roomType, amenityId, checked) {
+  function toggleAmenity(amenityId, checked) {
     void mutate(`/manager/room-types/${roomType.id}/amenities/${amenityId}`, {
       method: checked ? 'POST' : 'DELETE',
       success: 'Room amenities updated.',
@@ -158,67 +166,118 @@ function RoomTypesPanel({ hotel, amenities, mutate }) {
   }
 
   return (
+    <article className="room-type-card">
+      {roomType.imageUrl && <img className="room-type-image" src={roomType.imageUrl} alt="" />}
+      <div className="item-heading">
+        <div><h3>{roomType.name}</h3><p>{roomType.capacity} guests · {Number(roomType.basePrice).toFixed(2)} {hotel.currency} · {roomType.rooms.length} physical room{roomType.rooms.length === 1 ? '' : 's'}</p></div>
+        <div className="button-row">
+          <button className="button" type="button" onClick={() => setEditing((current) => !current)}>{editing ? 'Close' : 'Edit'}</button>
+          <button className="button" type="button" onClick={() => void mutate(`/manager/room-types/${roomType.id}`, { method: 'PATCH', body: { isActive: !roomType.isActive }, success: 'Room availability updated.' })}>{roomType.isActive ? 'Hide from website' : 'Show on website'}</button>
+        </div>
+      </div>
+      {editing && (
+        <form className="form-grid room-type-form" onSubmit={save}>
+          <FormField label="Room name" name="name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
+          <FormField label="Maximum guests" name="capacity" type="number" min="1" max="20" value={form.capacity} onChange={(event) => setForm({ ...form, capacity: event.target.value })} required />
+          <FormField label="Base nightly price" name="basePrice" type="number" min="0" step="0.01" value={form.basePrice} onChange={(event) => setForm({ ...form, basePrice: event.target.value })} required />
+          <FormField label="Image URL" name="imageUrl" type="url" value={form.imageUrl} onChange={(event) => setForm({ ...form, imageUrl: event.target.value })} />
+          <label className="form-field form-wide"><span>Description</span><textarea rows="3" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
+          <div className="form-actions"><button className="button button-primary" type="submit">Save room</button></div>
+        </form>
+      )}
+      <div className="choice-grid choice-grid-small">
+        {amenities.map((amenity) => (
+          <label className="choice" key={amenity.id}>
+            <input type="checkbox" checked={selected.has(amenity.id)} onChange={(event) => toggleAmenity(amenity.id, event.target.checked)} />
+            <span>{amenity.name}</span>
+          </label>
+        ))}
+      </div>
+    </article>
+  )
+}
+
+const emptyRoomType = {
+  name: '',
+  description: '',
+  capacity: '2',
+  basePrice: '',
+  imageUrl: '',
+  imageFile: null,
+  roomNumbers: '',
+  amenityIds: [],
+}
+
+function RoomTypesPanel({ hotel, amenities, mutate, userId, onError }) {
+  const [form, setForm] = useState(emptyRoomType)
+  const [uploading, setUploading] = useState(false)
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+    setUploading(true)
+    try {
+      const imageUrl = form.imageFile
+        ? await uploadHotelImage(form.imageFile, userId)
+        : form.imageUrl || null
+      await mutate(`/manager/hotels/${hotel.id}/room-types`, {
+        method: 'POST',
+        body: {
+          name: form.name,
+          description: form.description,
+          capacity: form.capacity,
+          basePrice: form.basePrice,
+          imageUrl,
+          amenityIds: form.amenityIds,
+          roomNumbers: form.roomNumbers.split(',').map((value) => value.trim()).filter(Boolean),
+        },
+        success: 'Room created and published.',
+        after: () => setForm(emptyRoomType),
+      })
+    } catch (uploadError) {
+      onError(uploadError.message)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
     <section className="panel create-panel">
-      <div className="panel-heading"><div><h2>Room types</h2><p>Customers select a type; the system allocates a physical room.</p></div></div>
+      <div className="panel-heading"><div><h2>Create a room</h2><p>Add the complete guest-facing room and its physical room numbers in one step.</p></div></div>
       <form className="form-grid room-type-form" onSubmit={handleSubmit}>
-        <FormField label="Name" name="name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
-        <FormField label="Capacity" name="capacity" type="number" min="1" max="20" value={form.capacity} onChange={(event) => setForm({ ...form, capacity: event.target.value })} required />
+        <FormField label="Room name" name="name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="Deluxe double room" required />
+        <FormField label="Maximum guests" name="capacity" type="number" min="1" max="20" value={form.capacity} onChange={(event) => setForm({ ...form, capacity: event.target.value })} required />
         <FormField label="Base nightly price" name="basePrice" type="number" min="0" step="0.01" value={form.basePrice} onChange={(event) => setForm({ ...form, basePrice: event.target.value })} required />
-        <FormField label="Description" name="description" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
-        <div className="form-actions"><button className="button button-primary" type="submit">Add room type</button></div>
+        <FormField label="Physical room numbers" name="roomNumbers" value={form.roomNumbers} onChange={(event) => setForm({ ...form, roomNumbers: event.target.value })} placeholder="101, 102, 103" required />
+        <label className="form-field form-wide"><span>Description</span><textarea rows="4" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Beds, view, size, and anything guests should know." /></label>
+        <FormField label="Image URL" name="imageUrl" type="url" value={form.imageUrl} onChange={(event) => setForm({ ...form, imageUrl: event.target.value, imageFile: null })} placeholder="https://…" />
+        <label className="form-field"><span>Or upload an image</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setForm({ ...form, imageFile: event.target.files[0] ?? null, imageUrl: '' })} /></label>
+        <fieldset className="form-wide choice-fieldset">
+          <legend>Room amenities</legend>
+          <div className="choice-grid choice-grid-small">
+            {amenities.map((amenity) => (
+              <label className="choice" key={amenity.id}>
+                <input type="checkbox" checked={form.amenityIds.includes(amenity.id)} onChange={(event) => setForm((current) => ({ ...current, amenityIds: event.target.checked ? [...current.amenityIds, amenity.id] : current.amenityIds.filter((id) => id !== amenity.id) }))} />
+                <span>{amenity.name}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <div className="form-actions"><button className="button button-primary" type="submit" disabled={uploading}>{uploading ? 'Creating…' : 'Create room'}</button></div>
       </form>
       <div className="stack-list">
-        {hotel.roomTypes.map((roomType) => {
-          const selected = new Set(roomType.roomTypeAmenities.map((item) => item.amenity.id))
-          return (
-            <article className="room-type-card" key={roomType.id}>
-              <div className="item-heading">
-                <div><h3>{roomType.name}</h3><p>{roomType.capacity} guests · {Number(roomType.basePrice).toFixed(2)} {hotel.currency}</p></div>
-                <button className="button" type="button" onClick={() => void mutate(`/manager/room-types/${roomType.id}`, { method: 'PATCH', body: { isActive: !roomType.isActive }, success: 'Room type updated.' })}>{roomType.isActive ? 'Deactivate' : 'Activate'}</button>
-              </div>
-              <div className="choice-grid choice-grid-small">
-                {amenities.map((amenity) => (
-                  <label className="choice" key={amenity.id}>
-                    <input type="checkbox" checked={selected.has(amenity.id)} onChange={(event) => toggleAmenity(roomType, amenity.id, event.target.checked)} />
-                    <span>{amenity.name}</span>
-                  </label>
-                ))}
-              </div>
-            </article>
-          )
-        })}
-        {hotel.roomTypes.length === 0 && <p className="muted-copy padded-copy">No room types yet.</p>}
+        {hotel.roomTypes.map((roomType) => <RoomTypeEditor key={roomType.id} hotel={hotel} roomType={roomType} amenities={amenities} mutate={mutate} />)}
+        {hotel.roomTypes.length === 0 && <p className="muted-copy padded-copy">No rooms yet.</p>}
       </div>
     </section>
   )
 }
 
-function RoomsPanel({ hotel, mutate }) {
-  const [form, setForm] = useState({ roomTypeId: hotel.roomTypes[0]?.id ?? '', roomNumber: '' })
+function RoomInventoryPanel({ hotel, mutate }) {
   const rooms = hotel.roomTypes.flatMap((roomType) => roomType.rooms.map((room) => ({ ...room, roomTypeName: roomType.name })))
-
-  function handleSubmit(event) {
-    event.preventDefault()
-    void mutate(`/manager/hotels/${hotel.id}/rooms`, {
-      method: 'POST',
-      body: form,
-      success: 'Physical room created.',
-      after: () => setForm((current) => ({ ...current, roomNumber: '' })),
-    })
-  }
 
   return (
     <section className="panel compact-panel">
-      <div className="panel-heading"><div><h2>Physical rooms</h2><p>Room numbers stay private and prevent booking conflicts.</p></div></div>
-      {hotel.roomTypes.length > 0 && (
-        <form className="inline-form" onSubmit={handleSubmit}>
-          <select aria-label="Room type" value={form.roomTypeId} onChange={(event) => setForm({ ...form, roomTypeId: event.target.value })} required>
-            {hotel.roomTypes.map((roomType) => <option key={roomType.id} value={roomType.id}>{roomType.name}</option>)}
-          </select>
-          <input aria-label="Room number" placeholder="Room number" value={form.roomNumber} onChange={(event) => setForm({ ...form, roomNumber: event.target.value })} required />
-          <button className="button button-primary" type="submit">Add room</button>
-        </form>
-      )}
+      <div className="panel-heading"><div><h2>Room inventory</h2><p>Room numbers are added in the room form above. Use this list only to change their operational status.</p></div></div>
       <div className="simple-table">
         {rooms.map((room) => (
           <div key={room.id}><strong>{room.roomNumber}</strong><span>{room.roomTypeName}</span><select aria-label={`Status for room ${room.roomNumber}`} value={room.status} onChange={(event) => void mutate(`/manager/rooms/${room.id}`, { method: 'PATCH', body: { status: event.target.value }, success: 'Room status updated.' })}><option value="active">Active</option><option value="maintenance">Maintenance</option><option value="inactive">Inactive</option></select></div>
@@ -266,7 +325,7 @@ function PricingPanel({ hotel, mutate }) {
 
 export function ManagerHotelPage() {
   const { hotelId } = useParams()
-  const { session } = useAuth()
+  const { session, user } = useAuth()
   const [hotel, setHotel] = useState(null)
   const [lookups, setLookups] = useState({ facilities: [], amenities: [] })
   const [loading, setLoading] = useState(true)
@@ -320,21 +379,19 @@ export function ManagerHotelPage() {
       eyebrow="Hotel management"
       title={hotel.name}
       subtitle={`${hotel.city}, ${hotel.country}`}
-      action={<button className="button button-primary" type="button" disabled={busy || hotel.status === 'submitted'} onClick={() => void mutate(`/manager/hotels/${hotel.id}/submit`, { method: 'POST', success: 'Hotel submitted for administrator approval.' })}>{hotel.status === 'submitted' ? 'Awaiting approval' : 'Submit for approval'}</button>}
     >
-      <div className="management-toolbar"><Link to="/manager">← All hotels</Link><span className={`status-badge status-${hotel.status}`}>{hotel.status}</span>{busy && <span>Saving…</span>}</div>
+      <div className="management-toolbar"><Link to="/manager">← All hotels</Link>{busy && <span>Saving…</span>}</div>
       {error && <div className="message message-error" role="alert">{error}</div>}
       {message && <div className="message message-success" role="status">{message}</div>}
-      {hotel.rejectionReason && <div className="message message-error">Admin feedback: {hotel.rejectionReason}</div>}
 
       <HotelDetailsForm key={hotel.updatedAt} hotel={hotel} mutate={mutate} />
       <div className="management-grid">
         <FacilitiesPanel hotel={hotel} facilities={lookups.facilities} mutate={mutate} />
         <ImagesPanel hotel={hotel} mutate={mutate} />
       </div>
-      <RoomTypesPanel hotel={hotel} amenities={lookups.amenities} mutate={mutate} />
+      <RoomTypesPanel hotel={hotel} amenities={lookups.amenities} mutate={mutate} userId={user.id} onError={setError} />
       <div className="management-grid">
-        <RoomsPanel key={`rooms-${inventoryKey}`} hotel={hotel} mutate={mutate} />
+        <RoomInventoryPanel key={`rooms-${inventoryKey}`} hotel={hotel} mutate={mutate} />
         <PricingPanel key={`prices-${inventoryKey}`} hotel={hotel} mutate={mutate} />
       </div>
     </DashboardLayout>

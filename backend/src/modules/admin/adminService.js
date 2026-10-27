@@ -11,7 +11,7 @@ export async function listUsers(supabase, { role, page, limit }) {
     let query = supabase
         .from('profiles')
         .select(
-            'id, full_name, phone, role, manager_status, manager_status_reason, created_at, updated_at',
+            'id, full_name, phone, role, created_at, updated_at',
             { count: 'exact' },
         )
         .order('created_at', { ascending: false })
@@ -37,52 +37,6 @@ export async function listUsers(supabase, { role, page, limit }) {
     }
 }
 
-export async function listManagers(
-    supabase,
-    { status, page, limit },
-) {
-    const { from, to } = getPagination(page, limit)
-    let query = supabase
-        .from('profiles')
-        .select(
-            'id, full_name, phone, role, manager_status, manager_status_reason, created_at, updated_at',
-            { count: 'exact' },
-        )
-        .eq('role', 'manager')
-        .order('created_at', { ascending: false })
-        .range(from, to)
-
-    if (status) {
-        query = query.eq('manager_status', status)
-    }
-
-    const { data, error, count } = await query
-
-    throwSupabaseError(error, 'Could not load manager applications')
-
-    return {
-        managers: toCamelCase(data),
-        pagination: getPaginationMeta(count ?? 0, page, limit),
-    }
-}
-
-export async function updateManagerStatus(
-    supabase,
-    { managerId, status, reason },
-) {
-    const { data, error } = await supabase.rpc(
-        'admin_update_manager_status',
-        {
-            p_manager_id: managerId,
-            p_status: status,
-            p_reason: reason ?? null,
-        },
-    )
-
-    throwSupabaseError(error, 'Could not update manager status')
-    return toCamelCase(data)
-}
-
 export async function updateUserRole(
     supabase,
     { userId, role },
@@ -99,10 +53,7 @@ export async function updateUserRole(
     return toCamelCase(data)
 }
 
-export async function listHotels(
-    supabase,
-    { status, page, limit },
-) {
+export async function listHotels(supabase, { page, limit }) {
     const { from, to } = getPagination(page, limit)
     let query = supabase
         .from('hotels')
@@ -111,18 +62,13 @@ export async function listHotels(
                 *,
                 manager:profiles!hotels_manager_id_fkey(
                     id,
-                    full_name,
-                    manager_status
+                    full_name
                 )
             `,
             { count: 'exact' },
         )
         .order('created_at', { ascending: false })
         .range(from, to)
-
-    if (status) {
-        query = query.eq('status', status)
-    }
 
     const { data, error, count } = await query
 
@@ -132,21 +78,4 @@ export async function listHotels(
         hotels: toCamelCase(data),
         pagination: getPaginationMeta(count ?? 0, page, limit),
     }
-}
-
-export async function updateHotelStatus(
-    supabase,
-    { hotelId, status, reason },
-) {
-    const { data, error } = await supabase.rpc(
-        'admin_update_hotel_status',
-        {
-            p_hotel_id: hotelId,
-            p_status: status,
-            p_reason: reason ?? null,
-        },
-    )
-
-    throwSupabaseError(error, 'Could not update hotel status')
-    return toCamelCase(data)
 }

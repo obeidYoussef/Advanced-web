@@ -7,10 +7,7 @@ import { authorize } from '../../middleware/authorize.js'
 import { validate } from '../../middleware/validate.js'
 import {
     listHotels,
-    listManagers,
     listUsers,
-    updateHotelStatus,
-    updateManagerStatus,
     updateUserRole,
 } from './adminService.js'
 import {
@@ -26,31 +23,7 @@ import {
 } from '../manager/reportService.js'
 
 const idParams = z.object({
-    managerId: z.uuid().optional(),
     userId: z.uuid().optional(),
-    hotelId: z.uuid().optional(),
-})
-
-const managerListSchema = z.object({
-    query: z.object({
-        ...paginationFields,
-        status: z
-            .enum(['pending', 'approved', 'rejected', 'suspended'])
-            .optional(),
-    }),
-})
-
-const managerStatusSchema = z.object({
-    params: idParams.required({ managerId: true }),
-    body: z.object({
-        status: z.enum([
-            'pending',
-            'approved',
-            'rejected',
-            'suspended',
-        ]),
-        reason: z.string().trim().min(2).max(500).nullish(),
-    }),
 })
 
 const userRoleSchema = z.object({
@@ -63,23 +36,6 @@ const userRoleSchema = z.object({
 const hotelListSchema = z.object({
     query: z.object({
         ...paginationFields,
-        status: z
-            .enum([
-                'draft',
-                'submitted',
-                'approved',
-                'rejected',
-                'suspended',
-            ])
-            .optional(),
-    }),
-})
-
-const hotelStatusSchema = z.object({
-    params: idParams.required({ hotelId: true }),
-    body: z.object({
-        status: z.enum(['approved', 'rejected', 'suspended']),
-        reason: z.string().trim().min(2).max(500).nullish(),
     }),
 })
 
@@ -272,35 +228,6 @@ adminRouter.get(
     },
 )
 
-adminRouter.get(
-    '/managers',
-    validate(managerListSchema),
-    async (request, response) => {
-        const result = await listManagers(
-            request.auth.supabase,
-            request.validated.query,
-        )
-
-        response.status(200).json(result)
-    },
-)
-
-adminRouter.patch(
-    '/managers/:managerId/status',
-    validate(managerStatusSchema),
-    async (request, response) => {
-        const manager = await updateManagerStatus(
-            request.auth.supabase,
-            {
-                managerId: request.validated.params.managerId,
-                ...request.validated.body,
-            },
-        )
-
-        response.status(200).json({ manager })
-    },
-)
-
 adminRouter.patch(
     '/users/:userId/role',
     validate(userRoleSchema),
@@ -327,18 +254,3 @@ adminRouter.get(
     },
 )
 
-adminRouter.patch(
-    '/hotels/:hotelId/status',
-    validate(hotelStatusSchema),
-    async (request, response) => {
-        const hotel = await updateHotelStatus(
-            request.auth.supabase,
-            {
-                hotelId: request.validated.params.hotelId,
-                ...request.validated.body,
-            },
-        )
-
-        response.status(200).json({ hotel })
-    },
-)

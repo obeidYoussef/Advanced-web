@@ -16,8 +16,6 @@ authRouter.get('/me', authenticate, (request, response) => {
             fullName: profile.full_name,
             phone: profile.phone,
             role: profile.role,
-            managerStatus: profile.manager_status,
-            managerStatusReason: profile.manager_status_reason,
         },
     })
 })
@@ -65,8 +63,6 @@ authRouter.patch(
                 fullName: data.full_name,
                 phone: data.phone,
                 role: data.role,
-                managerStatus: data.manager_status,
-                managerStatusReason: data.manager_status_reason,
             },
         })
     },

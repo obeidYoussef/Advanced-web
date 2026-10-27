@@ -10,6 +10,7 @@ function RoomOption({ hotel, room, quote, query }) {
 
   return (
     <article className="room-option">
+      {room.imageUrl && <img className="room-option-image" src={room.imageUrl} alt="" />}
       <div className="room-option-copy">
         <h3>{room.name}</h3>
         <p>Up to {room.capacity} guest{room.capacity === 1 ? '' : 's'}</p>
@@ -27,7 +28,7 @@ function RoomOption({ hotel, room, quote, query }) {
           <>
             <small>{quote.nightCount} night total</small>
             <strong>{Number(quote.totalAmount).toFixed(2)} {quote.currency}</strong>
-            <small>Includes {Number(quote.taxAmount).toFixed(2)} tax and {Number(quote.serviceFee).toFixed(2)} service fee</small>
+            <small>Includes {Number(quote.serviceFee).toFixed(2)} service fee</small>
             <span>{quote.availableRooms} room{quote.availableRooms === 1 ? '' : 's'} left</span>
           </>
         ) : (
@@ -170,7 +171,7 @@ export function HotelDetailsPage() {
         <div className="property-overview">
           <section>
             <h2>About this property</h2>
-            <p>{hotel.description || 'A comfortable, approved place for your next stay.'}</p>
+            <p>{hotel.description || 'A comfortable place for your next stay.'}</p>
           </section>
           <aside>
             <h2>Popular facilities</h2>

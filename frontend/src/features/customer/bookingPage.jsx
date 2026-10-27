@@ -6,7 +6,7 @@ import { useAuth } from '../auth/useAuth.js'
 
 export function BookingPage() {
   const { roomTypeId } = useParams()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { session, user } = useAuth()
   const hotelId = searchParams.get('hotelId')
   const checkIn = searchParams.get('checkIn') ?? ''
@@ -14,6 +14,7 @@ export function BookingPage() {
   const guests = searchParams.get('guests') ?? '1'
   const [hotel, setHotel] = useState(null)
   const [quote, setQuote] = useState(null)
+  const [stay, setStay] = useState({ checkIn, checkOut })
   const [form, setForm] = useState({
     primaryGuestName: user.fullName ?? '',
     primaryGuestEmail: user.email ?? '',
@@ -23,6 +24,7 @@ export function BookingPage() {
   const [reservation, setReservation] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [quoteLoading, setQuoteLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -38,13 +40,37 @@ export function BookingPage() {
         setQuote(quoteData.quote)
       })
       .catch((loadError) => active && setError(loadError.message))
-      .finally(() => active && setLoading(false))
+      .finally(() => {
+        if (active) {
+          setLoading(false)
+          setQuoteLoading(false)
+        }
+      })
     return () => { active = false }
   }, [checkIn, checkOut, guests, hotelId, roomTypeId])
 
   function updateField(event) {
     const { name, value } = event.target
     setForm((current) => ({ ...current, [name]: value }))
+  }
+
+  function updateStay(event) {
+    const { name, value } = event.target
+    setStay((current) => ({ ...current, [name]: value }))
+  }
+
+  function applyStay() {
+    setError('')
+    if (!stay.checkIn || !stay.checkOut || stay.checkOut <= stay.checkIn) {
+      setError('Choose a check-out date after your check-in date.')
+      return
+    }
+
+    const next = new URLSearchParams(searchParams)
+    next.set('checkIn', stay.checkIn)
+    next.set('checkOut', stay.checkOut)
+    setQuoteLoading(true)
+    setSearchParams(next, { replace: true })
   }
 
   async function handleSubmit(event) {
@@ -78,6 +104,7 @@ export function BookingPage() {
 
   const room = hotel?.roomTypes.find((item) => item.id === roomTypeId)
   const detailsQuery = new URLSearchParams({ checkIn, checkOut, guests })
+  const stayChanged = stay.checkIn !== checkIn || stay.checkOut !== checkOut
 
   if (reservation) {
     return (
@@ -96,7 +123,7 @@ export function BookingPage() {
               <div><dt>Payment status</dt><dd>{reservation.paymentStatus}</dd></div>
             </dl>
             <div className="button-row">
-              <Link className="button button-primary" to="/customer">View my reservations</Link>
+              <Link className="button button-primary" to="/reservations">View my reservations</Link>
               <Link className="button" to="/">Find another stay</Link>
             </div>
           </section>
@@ -122,6 +149,20 @@ export function BookingPage() {
           <div className="booking-layout">
             <form className="booking-form" onSubmit={handleSubmit}>
               <section className="booking-panel">
+                <h2>Your stay</h2>
+                <div className="form-grid booking-form-grid">
+                  <label className="form-field">Check-in<input name="checkIn" type="date" value={stay.checkIn} onChange={updateStay} required /></label>
+                  <label className="form-field">Check-out<input name="checkOut" type="date" min={stay.checkIn} value={stay.checkOut} onChange={updateStay} required /></label>
+                </div>
+                <div className="stay-update-row">
+                  <p>{quote.nightCount} night{quote.nightCount === 1 ? '' : 's'} selected</p>
+                  <button className="button" type="button" onClick={applyStay} disabled={!stayChanged || quoteLoading}>
+                    {quoteLoading ? 'Updating…' : stayChanged ? 'Update stay' : 'Stay updated'}
+                  </button>
+                </div>
+              </section>
+
+              <section className="booking-panel">
                 <h2>Guest details</h2>
                 <div className="form-grid booking-form-grid">
                   <label className="form-field">Full name<input name="primaryGuestName" value={form.primaryGuestName} onChange={updateField} required /></label>
@@ -136,7 +177,7 @@ export function BookingPage() {
                 <p><strong>Free cancellation</strong> until 48 hours before check-in. After that deadline, changes or cancellation require manager handling.</p>
               </section>
 
-              <button className="button button-primary booking-submit" type="submit" disabled={submitting || quote.availableRooms < 1}>
+              <button className="button button-primary booking-submit" type="submit" disabled={submitting || quoteLoading || stayChanged || quote.availableRooms < 1}>
                 {submitting ? 'Confirming reservation…' : 'Confirm reservation'}
               </button>
               <p className="booking-fine-print">No online payment is collected. The reservation is confirmed immediately with payment status marked unpaid.</p>
@@ -153,7 +194,6 @@ export function BookingPage() {
                 <div><dt>Check-in</dt><dd>{checkIn}</dd></div>
                 <div><dt>Check-out</dt><dd>{checkOut}</dd></div>
                 <div><dt>{quote.nightCount} night{quote.nightCount === 1 ? '' : 's'}</dt><dd>{Number(quote.nightlySubtotal).toFixed(2)} {quote.currency}</dd></div>
-                <div><dt>Taxes</dt><dd>{Number(quote.taxAmount).toFixed(2)} {quote.currency}</dd></div>
                 <div><dt>Service fee</dt><dd>{Number(quote.serviceFee).toFixed(2)} {quote.currency}</dd></div>
                 <div className="booking-total"><dt>Total</dt><dd>{Number(quote.totalAmount).toFixed(2)} {quote.currency}</dd></div>
               </dl>

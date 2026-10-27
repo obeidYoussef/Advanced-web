@@ -20,7 +20,16 @@ Authorization: Bearer <access-token>
 Content-Type: application/json
 ```
 
-Run all automated checks with `npm test`.
+Required environment values are `FRONTEND_URL`, `SUPABASE_URL`, and
+`SUPABASE_PUBLISHABLE_KEY`. `SUPABASE_SECRET_KEY`, `RESEND_API_KEY`, and
+`EMAIL_FROM` are required only for admin email lookup and reservation email
+delivery. Copy `.env.example` rather than committing `.env`.
+
+Run all automated checks with:
+
+```bash
+npm run check
+```
 
 ## Response conventions
 
@@ -56,8 +65,8 @@ Errors always use:
 | GET | `/api/auth/me` | Current account and role |
 | PATCH | `/api/auth/me` | Update `fullName` and/or `phone` |
 | GET | `/api/public/lookups` | Predefined facilities and amenities |
-| GET | `/api/public/hotels` | Search approved hotels |
-| GET | `/api/public/hotels/:hotelId` | Approved hotel details |
+| GET | `/api/public/hotels` | Search published hotels |
+| GET | `/api/public/hotels/:hotelId` | Published hotel details |
 | GET | `/api/public/hotels/:hotelId/reviews` | Visible hotel reviews |
 | GET | `/api/public/room-types/:roomTypeId/quote` | Live price and availability |
 
@@ -99,18 +108,17 @@ Create and modify body:
 
 ### Manager
 
-All paths start with `/api/manager` and require an approved manager token.
-Pending, rejected, and suspended managers receive `MANAGER_NOT_APPROVED`.
+All paths start with `/api/manager` and require a manager token. Managers can
+use the workspace as soon as their email is confirmed.
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| GET, POST | `/hotels` | List owned hotels / create a draft |
+| GET, POST | `/hotels` | List owned hotels / create and publish a hotel |
 | GET, PATCH | `/hotels/:hotelId` | Read / edit an owned hotel |
-| POST | `/hotels/:hotelId/submit` | Submit a complete draft for admin approval |
 | POST, DELETE | `/hotels/:hotelId/facilities/:facilityId` | Add / remove a facility |
 | POST | `/hotels/:hotelId/images` | Add an image URL |
 | PATCH, DELETE | `/images/:imageId` | Edit / remove an image |
-| POST | `/hotels/:hotelId/room-types` | Create a room type |
+| POST | `/hotels/:hotelId/room-types` | Atomically create a room type, amenities, and physical inventory |
 | PATCH | `/room-types/:roomTypeId` | Edit or deactivate a room type |
 | POST, DELETE | `/room-types/:roomTypeId/amenities/:amenityId` | Add / remove an amenity |
 | POST | `/hotels/:hotelId/rooms` | Create a physical room |
@@ -129,6 +137,25 @@ Pending, rejected, and suspended managers receive `MANAGER_NOT_APPROVED`.
 Use `hotelId` on report routes to report one hotel. Without it, all hotels
 owned by the manager are included.
 
+Complete room creation accepts the guest-facing room, amenity IDs, and
+physical inventory together:
+
+```json
+{
+  "name": "Deluxe double room",
+  "description": "King bed and city view",
+  "capacity": 2,
+  "basePrice": 120,
+  "imageUrl": "https://example.com/room.webp",
+  "amenityIds": [1, 3],
+  "roomNumbers": ["101", "102"]
+}
+```
+
+`imageUrl` may be `null`. The frontend can first upload JPG, PNG, or WebP files
+up to 5 MB to the Supabase `hotel-images` bucket, then send its public URL.
+Tax is disabled; quotes use nightly prices plus the configured service fee.
+
 ### Administrator
 
 All paths start with `/api/admin` and require an admin token.
@@ -137,10 +164,7 @@ All paths start with `/api/admin` and require an admin token.
 | --- | --- | --- |
 | GET | `/users` | Paginated users, optionally filtered by role |
 | PATCH | `/users/:userId/role` | Set customer, manager, or admin role |
-| GET | `/managers` | Manager applications by status |
-| PATCH | `/managers/:managerId/status` | Approve, reject, suspend, or reopen |
-| GET | `/hotels` | Hotels by moderation status |
-| PATCH | `/hotels/:hotelId/status` | Approve, reject, or suspend a hotel |
+| GET | `/hotels` | Paginated platform hotels |
 | GET | `/reservations` | System-wide filtered reservations |
 | POST | `/reservations/:reservationId/cancel` | Cancel with a recorded reason |
 | PATCH | `/reservations/:reservationId/status` | Update operational status |
@@ -149,8 +173,7 @@ All paths start with `/api/admin` and require an admin token.
 | GET | `/reports/reservations.csv` | System-wide CSV export |
 | GET | `/audit-logs` | System-wide audit history |
 
-Rejection and suspension requests require a `reason` between 2 and 500
-characters. Admin accounts are not available through public registration.
+Admin accounts are not available through public registration.
 
 ## Email delivery
 
@@ -161,3 +184,27 @@ later delivery. `EMAIL_FROM` must use a domain verified in Resend.
 
 Supabase signup confirmation email is separate: configure its SMTP provider,
 site URL, and redirect URLs in the Supabase Auth dashboard.
+
+## Folder and file guide
+
+| Path | Responsibility |
+| --- | --- |
+| `src/server.js` | Starts the HTTP server and optional email worker |
+| `src/app.js` | Express security middleware, rate limiting, routes, health check, and error pipeline |
+| `src/config/` | Environment parsing and validation |
+| `src/lib/` | Shared Supabase clients, API errors, pagination, casing, and audit helpers |
+| `src/middleware/` | Authentication, role authorization, Zod validation, request IDs, and error responses |
+| `src/modules/public/` | Anonymous hotel search, property details, lookups, reviews, and quotes |
+| `src/modules/auth/` | Current profile read and update |
+| `src/modules/customer/` | Customer reservation lifecycle and completed-stay reviews |
+| `src/modules/manager/` | Hotel catalog, room inventory, reservation operations, reports, and CSV export |
+| `src/modules/admin/` | Platform-wide monitoring and role/operation endpoints |
+| `src/jobs/emailWorker.js` | Claims and delivers queued reservation emails through Resend |
+| `test/api.test.js` | HTTP, security, validation, and route behavior tests |
+| `test/helpers.test.js` | Shared helper and CSV tests |
+| `.env.example` | Safe server configuration template |
+| `Dockerfile` | Production container entry point |
+
+Route files own HTTP validation and responses. Service files own database calls.
+Authorization must continue to use the signed-in user's Supabase client so RLS
+remains the final access boundary.

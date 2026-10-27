@@ -6,8 +6,7 @@ import { LoginPage } from './features/auth/loginPage.jsx'
 import { RegisterPage } from './features/auth/registerPage.jsx'
 import { RequireAuth } from './features/auth/requireAuth.jsx'
 import { RequireCustomer } from './features/customer/requireCustomer.jsx'
-import { ManagerApplicationStatusPage } from './features/manager/managerApplicationStatusPage.jsx'
-import { RequireApprovedManager } from './features/manager/requireApprovedManager.jsx'
+import { RequireManager } from './features/manager/requireManager.jsx'
 import { HomePage } from './features/public/homePage.jsx'
 
 const HotelDetailsPage = lazy(() =>
@@ -25,9 +24,9 @@ const BookingPage = lazy(() =>
     default: module.BookingPage,
   })),
 )
-const CustomerDashboardPage = lazy(() =>
-  import('./features/customer/customerDashboardPage.jsx').then((module) => ({
-    default: module.CustomerDashboardPage,
+const CustomerReservationsPage = lazy(() =>
+  import('./features/customer/customerReservationsPage.jsx').then((module) => ({
+    default: module.CustomerReservationsPage,
   })),
 )
 const ManagerDashboardPage = lazy(() =>
@@ -66,16 +65,12 @@ export default function App() {
         <Route path="/account" element={<AccountPage />} />
 
         <Route element={<RequireCustomer />}>
-          <Route path="/customer" element={<CustomerDashboardPage />} />
+          <Route path="/reservations" element={<CustomerReservationsPage />} />
+          <Route path="/customer" element={<Navigate to="/reservations" replace />} />
           <Route path="/book/:roomTypeId" element={<BookingPage />} />
         </Route>
 
-        <Route
-          path="/manager/application-status"
-          element={<ManagerApplicationStatusPage />}
-        />
-
-        <Route element={<RequireApprovedManager />}>
+        <Route element={<RequireManager />}>
           <Route path="/manager" element={<ManagerDashboardPage />} />
           <Route path="/manager/hotels/:hotelId" element={<ManagerHotelPage />} />
           <Route path="/manager/reservations" element={<ManagerReservationsPage />} />

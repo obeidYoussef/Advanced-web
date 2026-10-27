@@ -24,19 +24,6 @@ export function authorize(...roles) {
             )
         }
 
-        if (
-            profile.role === 'manager' &&
-            profile.manager_status !== 'approved'
-        ) {
-            return next(
-                new HttpError(
-                    403,
-                    'MANAGER_NOT_APPROVED',
-                    'Manager approval is required',
-                ),
-            )
-        }
-
         return next()
     }
 }

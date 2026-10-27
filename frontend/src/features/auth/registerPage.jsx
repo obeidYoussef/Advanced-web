@@ -143,11 +143,6 @@ export function RegisterPage() {
             <option value="manager">Hotel manager</option>
           </select>
 
-          {form.accountType === 'manager' && (
-            <span className="field-hint">
-              Manager access requires administrator approval.
-            </span>
-          )}
         </div>
 
         <FormField
